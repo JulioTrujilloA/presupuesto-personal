@@ -6,8 +6,10 @@ import { encodeBase64 } from "jsr:@std/encoding/base64";
 // El cliente sube el PDF a Storage (bucket 'estados-cuenta') y llama aquí con
 // { path, cuenta_id, documento_origen }. La función descarga el PDF del lado
 // servidor (sin el límite de tamaño del request), lo manda a Claude (API key
-// del lado servidor), inserta en transacciones_importadas (estado 'pendiente'),
-// aplica reglas_categorizacion y devuelve las filas. Borra el PDF al terminar.
+// del lado servidor), inserta en transacciones_importadas (estado 'pendiente',
+// con documento_path), aplica reglas_categorizacion y devuelve las filas.
+// CONSERVA el PDF en Storage para verlo en Pendientes; el cliente lo borra
+// cuando termina de revisarlo.
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 const MODEL = "claude-sonnet-4-6";
@@ -160,12 +162,15 @@ Deno.serve(async (req: Request) => {
 
   const transacciones = parsed.transacciones ?? [];
 
-  // Limpieza: borra el PDF de Storage (ya no se necesita).
-  await admin.storage.from(BUCKET).remove([path]);
+  // El PDF se CONSERVA en Storage para verlo en Pendientes; se borra desde el
+  // cliente cuando ya no quedan filas pendientes de ese documento. Si no se
+  // extrajo nada, no hay nada que revisar: se borra de una vez.
+  if (transacciones.length === 0) {
+    await admin.storage.from(BUCKET).remove([path]);
+    return json({ filas: [] }, 200);
+  }
 
-  if (transacciones.length === 0) return json({ filas: [] }, 200);
-
-  // 3. Insertar en staging con estado 'pendiente'.
+  // 3. Insertar en staging con estado 'pendiente' (guardando la ruta del PDF).
   const filas = transacciones.map((t) => ({
     cuenta_id,
     fecha: t.fecha,
@@ -173,6 +178,7 @@ Deno.serve(async (req: Request) => {
     monto: t.monto,
     tipo: t.tipo,
     documento_origen: documento_origen ?? null,
+    documento_path: path,
     estado: "pendiente",
   }));
 

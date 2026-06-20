@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { formatAmount } from '../lib/importacion'
 
+const BUCKET = 'estados-cuenta'
+
 // Clave para comparar transacciones: cuenta + fecha + monto + descripción.
 const claveTx = (cuentaId, fecha, monto, desc) =>
   `${cuentaId}|${fecha}|${Number(monto)}|${(desc ?? '').trim().toLowerCase()}`
@@ -33,6 +35,19 @@ const marcarDuplicados = async (pendientes) => {
   })
 }
 
+// Borra de Storage los PDFs cuyos documentos ya no tienen filas pendientes.
+const limpiarDocs = async (paths) => {
+  const unique = [...new Set((paths ?? []).filter(Boolean))]
+  for (const p of unique) {
+    const { count } = await supabase
+      .from('transacciones_importadas')
+      .select('id', { count: 'exact', head: true })
+      .eq('estado', 'pendiente')
+      .eq('documento_path', p)
+    if (!count) await supabase.storage.from(BUCKET).remove([p])
+  }
+}
+
 export default function Pendientes() {
   const [pendientes, setPendientes] = useState([])
   const [categorias, setCategorias] = useState([])
@@ -40,7 +55,9 @@ export default function Pendientes() {
   const [error, setError] = useState(null)
   const [aviso, setAviso] = useState(null)
   const [seleccionCategoria, setSeleccionCategoria] = useState({})
-  const [pdfUrl, setPdfUrl] = useState(null)
+
+  const [docPath, setDocPath] = useState(null) // documento de Storage elegido
+  const [storageUrl, setStorageUrl] = useState(null)
 
   const cargarDatos = useCallback(async () => {
     const [pendRes, catRes] = await Promise.all([
@@ -70,15 +87,30 @@ export default function Pendientes() {
     cargarDatos()
   }, [cargarDatos])
 
-  // Limpieza del object URL del PDF.
-  useEffect(() => () => { if (pdfUrl) URL.revokeObjectURL(pdfUrl) }, [pdfUrl])
-
-  const elegirPdf = (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (pdfUrl) URL.revokeObjectURL(pdfUrl)
-    setPdfUrl(URL.createObjectURL(file))
+  // Documentos (PDF) presentes en las filas pendientes.
+  const documentos = []
+  const vistosDoc = new Set()
+  for (const p of pendientes) {
+    if (p.documento_path && !vistosDoc.has(p.documento_path)) {
+      vistosDoc.add(p.documento_path)
+      documentos.push({ path: p.documento_path, nombre: p.documento_origen || p.documento_path.split('/').pop() })
+    }
   }
+  // Documento activo: el elegido, o el primero disponible.
+  const docActivo = documentos.find((d) => d.path === docPath)?.path ?? documentos[0]?.path ?? null
+
+  // Genera URL firmada del documento activo de Storage.
+  useEffect(() => {
+    let activo = true
+    const gen = async () => {
+      if (!docActivo) { setStorageUrl(null); return }
+      const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(docActivo, 3600)
+      if (!activo) return
+      setStorageUrl(error ? null : data.signedUrl)
+    }
+    gen()
+    return () => { activo = false }
+  }, [docActivo])
 
   const categoriaSeleccionada = (fila) =>
     seleccionCategoria[fila.id] ?? fila.categoria_sugerida_id ?? ''
@@ -115,11 +147,11 @@ export default function Pendientes() {
     return errorUpdate ? errorUpdate.message : null
   }
 
-  // Confirma una sola (usado en los duplicados, que no entran al masivo).
   const confirmarUno = async (fila) => {
     setError(null); setAviso(null)
     const err = await confirmarFila(fila)
     if (err) { setError(err); return }
+    await limpiarDocs([fila.documento_path])
     await cargarDatos()
   }
 
@@ -134,6 +166,7 @@ export default function Pendientes() {
       if (err) { setError(`Error al confirmar (${n} ya guardadas): ${err}`); await cargarDatos(); return }
       n++
     }
+    await limpiarDocs(listas.map((f) => f.documento_path))
     setAviso(`${n} transacción${n !== 1 ? 'es' : ''} confirmada${n !== 1 ? 's' : ''}.`)
     setSeleccionCategoria({})
     await cargarDatos()
@@ -148,6 +181,7 @@ export default function Pendientes() {
       .update({ estado: 'descartada' })
       .eq('id', fila.id)
     if (error) { setError(error.message); return }
+    await limpiarDocs([fila.documento_path])
     setPendientes((prev) => prev.filter((p) => p.id !== fila.id))
   }
 
@@ -157,7 +191,7 @@ export default function Pendientes() {
       <p style={styles.subtitle}>
         {pendientes.length === 0
           ? 'No hay transacciones pendientes de revisión.'
-          : `${pendientes.length} por revisar. Abre el PDF al lado para cotejar antes de confirmar.`}
+          : `${pendientes.length} por revisar. El PDF importado se muestra al lado para cotejar.`}
       </p>
 
       {error && <div style={styles.error}>{error}</div>}
@@ -217,16 +251,23 @@ export default function Pendientes() {
           )}
         </div>
 
-        {/* Visor de PDF local */}
+        {/* Visor de PDF */}
         <div style={styles.pdfPane}>
-          <label style={styles.fileLabel}>
-            {pdfUrl ? 'Cambiar PDF' : 'Abrir PDF del estado de cuenta'}
-            <input type="file" accept="application/pdf" onChange={elegirPdf} style={{ display: 'none' }} />
-          </label>
-          {pdfUrl ? (
-            <iframe src={pdfUrl} title="PDF" style={styles.iframe} />
+          {documentos.length > 1 && (
+            <select
+              value={docActivo ?? ''}
+              onChange={(e) => setDocPath(e.target.value)}
+              style={styles.docSelect}
+            >
+              {documentos.map((d) => <option key={d.path} value={d.path}>{d.nombre}</option>)}
+            </select>
+          )}
+          {storageUrl ? (
+            <iframe src={storageUrl} title="PDF" style={styles.iframe} />
           ) : (
-            <div style={styles.pdfEmpty}>Abre el PDF para cotejarlo con las transacciones por revisar.</div>
+            <div style={styles.pdfEmpty}>
+              {documentos.length > 0 ? 'Cargando PDF...' : 'El PDF importado aparecerá aquí al revisar.'}
+            </div>
           )}
         </div>
       </div>
@@ -254,7 +295,7 @@ const styles = {
   split: { display: 'flex', gap: '12px', alignItems: 'stretch', flexWrap: 'wrap' },
   listPane: { flex: '1 1 360px', minWidth: '320px', height: '70vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', paddingRight: '4px' },
   pdfPane: { flex: '1 1 360px', minWidth: '320px', height: '70vh', display: 'flex', flexDirection: 'column', gap: '8px', background: '#1e293b', borderRadius: '10px', padding: '10px' },
-  fileLabel: { display: 'inline-block', textAlign: 'center', padding: '8px', borderRadius: '6px', border: '1px dashed #475569', color: '#60a5fa', cursor: 'pointer', fontSize: '13px' },
+  docSelect: { padding: '7px 8px', borderRadius: '6px', border: '1px solid #334155', background: '#0f172a', color: '#f8fafc', fontSize: '13px' },
   iframe: { flex: 1, width: '100%', border: 'none', borderRadius: '8px', background: '#fff' },
   pdfEmpty: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '13px', textAlign: 'center', padding: '20px' },
   loading: { padding: '40px', textAlign: 'center', color: '#94a3b8' },

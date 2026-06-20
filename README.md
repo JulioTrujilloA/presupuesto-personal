@@ -67,8 +67,12 @@ de Edge Functions se cuelga con cuerpos grandes, >~0.5-1 MB):
 3. La función descarga el PDF de Storage (service-role, lado servidor), lo manda
    a Claude (`thinking` off + `effort: low` para minimizar latencia), **inserta
    en `transacciones_importadas` con estado `pendiente`** (JWT del usuario,
-   respeta RLS), aplica `reglas_categorizacion`, borra el PDF y devuelve las
-   filas.
+   respeta RLS, guardando `documento_path`), aplica `reglas_categorizacion` y
+   devuelve las filas.
+4. El PDF **se conserva** en Storage para verlo en la pantalla Pendientes
+   (visor con URL firmada). El cliente lo borra cuando ya no quedan filas
+   pendientes de ese documento (todo confirmado/descartado). Si Claude no
+   extrae nada, la función lo borra de una vez.
 
 La API key se configura como **secreto** de la función (no en el `.env` del
 frontend):
