@@ -2,6 +2,37 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { formatAmount } from '../lib/importacion'
 
+// Clave para comparar transacciones: cuenta + fecha + monto + descripción.
+const claveTx = (cuentaId, fecha, monto, desc) =>
+  `${cuentaId}|${fecha}|${Number(monto)}|${(desc ?? '').trim().toLowerCase()}`
+
+// Marca cada fila pendiente con _dup=true si ya existe una transacción
+// confirmada equivalente, o si se repite dentro del mismo lote pendiente.
+const marcarDuplicados = async (pendientes) => {
+  if (!pendientes || pendientes.length === 0) return pendientes ?? []
+
+  const fechas = [...new Set(pendientes.map((p) => p.fecha))]
+  const cuentaIds = [...new Set(pendientes.map((p) => p.cuenta_id))]
+
+  const { data: confirmadas } = await supabase
+    .from('transacciones')
+    .select('cuenta_id, fecha, monto, detalle')
+    .in('fecha', fechas)
+    .in('cuenta_id', cuentaIds)
+
+  const setConfirmadas = new Set(
+    (confirmadas ?? []).map((c) => claveTx(c.cuenta_id, c.fecha, c.monto, c.detalle)),
+  )
+
+  const vistos = new Set()
+  return pendientes.map((p) => {
+    const k = claveTx(p.cuenta_id, p.fecha, p.monto, p.descripcion_original)
+    const dup = setConfirmadas.has(k) || vistos.has(k)
+    vistos.add(k)
+    return { ...p, _dup: dup }
+  })
+}
+
 export default function Pendientes() {
   const [pendientes, setPendientes] = useState([])
   const [categorias, setCategorias] = useState([])
@@ -22,12 +53,16 @@ export default function Pendientes() {
       supabase.from('categorias').select('id, nombre, tipo').eq('activa', true).order('nombre'),
     ])
 
-    if (pendRes.error) setError(pendRes.error.message)
-    else setPendientes(pendRes.data)
-
     if (catRes.error) setError(catRes.error.message)
     else setCategorias(catRes.data)
 
+    if (pendRes.error) {
+      setError(pendRes.error.message)
+      setCargando(false)
+      return
+    }
+
+    setPendientes(await marcarDuplicados(pendRes.data))
     setCargando(false)
   }, [])
 
@@ -119,13 +154,17 @@ export default function Pendientes() {
 
       <div style={styles.list}>
         {pendientes.map((fila) => (
-          <div key={fila.id} style={styles.card}>
+          <div key={fila.id} style={fila._dup ? { ...styles.card, ...styles.cardDup } : styles.card}>
             <div style={styles.cardHeader}>
               <span style={styles.fecha}>{fila.fecha}</span>
               <span style={fila.tipo === 'ingreso' ? styles.tipoIngreso : styles.tipoGasto}>
                 {fila.tipo === 'ingreso' ? 'Ingreso' : 'Gasto'}
               </span>
             </div>
+
+            {fila._dup && (
+              <div style={styles.dupBadge}>⚠ Posible duplicado (ya existe una igual)</div>
+            )}
 
             <p style={styles.descripcion}>{fila.descripcion_original}</p>
 
@@ -169,6 +208,11 @@ const styles = {
   loading: { padding: '40px', textAlign: 'center', color: '#94a3b8' },
   list: { display: 'flex', flexDirection: 'column', gap: '12px' },
   card: { background: '#1e293b', borderRadius: '10px', padding: '16px' },
+  cardDup: { border: '1px solid #b45309' },
+  dupBadge: {
+    fontSize: '12px', color: '#fdba74', background: '#7c2d12', borderRadius: '6px',
+    padding: '4px 8px', margin: '0 0 8px 0', display: 'inline-block',
+  },
   cardHeader: { display: 'flex', justifyContent: 'space-between', marginBottom: '8px' },
   fecha: { fontSize: '12px', color: '#94a3b8' },
   tipoIngreso: { fontSize: '11px', color: '#4ade80', fontWeight: 600 },
