@@ -55,10 +55,23 @@ src/
 ## Parser de PDFs (Edge Function)
 
 La extracción de transacciones usa la API de Claude. **La API key de Anthropic
-nunca debe vivir en el cliente.** La llamada se hace desde una Supabase Edge
-Function, y el frontend la consume vía `VITE_ANALYZE_ENDPOINT`. Si esa variable
-no está definida, `importacion.js` cae a un placeholder que apunta directo a
-`api.anthropic.com` — solo para desarrollo, nunca en producción.
+nunca vive en el cliente.** La llamada corre en la Edge Function
+`analizar-estado` (`supabase/functions/analizar-estado/`), que el frontend
+consume con `supabase.functions.invoke`. El cliente solo envía el PDF en base64.
+
+La API key se configura como **secreto** de la función (no en el `.env` del
+frontend):
+
+```bash
+supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+```
+
+También se puede setear desde el dashboard de Supabase →
+Edge Functions → Secrets. Para redeployar tras cambios:
+
+```bash
+supabase functions deploy analizar-estado
+```
 
 ## Notas
 
