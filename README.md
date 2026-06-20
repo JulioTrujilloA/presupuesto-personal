@@ -56,12 +56,19 @@ src/
 
 La extracción de transacciones usa la API de Claude. **La API key de Anthropic
 nunca vive en el cliente.** La llamada corre en la Edge Function
-`analizar-estado` (`supabase/functions/analizar-estado/`), que el frontend
-consume con `supabase.functions.invoke`. El cliente envía el PDF en base64 +
-`cuenta_id`; la función extrae las transacciones, **inserta en
-`transacciones_importadas` con estado `pendiente`** (usando el JWT del usuario,
-respeta RLS) y devuelve las filas. El cliente luego aplica
-`reglas_categorizacion` sobre esas filas.
+`analizar-estado` (`supabase/functions/analizar-estado/`).
+
+Flujo (importante: el PDF **no** se manda en el cuerpo del request — el gateway
+de Edge Functions se cuelga con cuerpos grandes, >~0.5-1 MB):
+
+1. El cliente sube el PDF al bucket de Storage `estados-cuenta` (privado).
+2. Llama a `analizar-estado` con `{ path, cuenta_id, documento_origen }` —
+   request diminuto.
+3. La función descarga el PDF de Storage (service-role, lado servidor), lo manda
+   a Claude (`thinking` off + `effort: low` para minimizar latencia), **inserta
+   en `transacciones_importadas` con estado `pendiente`** (JWT del usuario,
+   respeta RLS), aplica `reglas_categorizacion`, borra el PDF y devuelve las
+   filas.
 
 La API key se configura como **secreto** de la función (no en el `.env` del
 frontend):
@@ -77,6 +84,10 @@ Edge Functions → Secrets. Para redeployar tras cambios:
 supabase functions deploy analizar-estado
 ```
 
+El bucket y sus políticas RLS están versionados en `supabase/seed-storage.sql`.
+
 ## Notas
 
 - El `.env` con credenciales reales está en `.gitignore`; no lo subas al repo.
+- El Dashboard tiene selector de mes/año y modo **Acumulado** (todas las
+  transacciones).
