@@ -4,6 +4,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Importar from './pages/Importar'
 import Pendientes from './pages/Pendientes'
+import Transacciones from './pages/Transacciones'
 import Admin from './pages/Admin'
 
 export default function App() {
@@ -59,6 +60,12 @@ export default function App() {
           Pendientes
         </button>
         <button
+          onClick={() => setVista('transacciones')}
+          style={vista === 'transacciones' ? styles.navButtonActive : styles.navButton}
+        >
+          Transacciones
+        </button>
+        <button
           onClick={() => setVista('admin')}
           style={vista === 'admin' ? styles.navButtonActive : styles.navButton}
         >
@@ -70,6 +77,7 @@ export default function App() {
         {vista === 'dashboard' && <Dashboard />}
         {vista === 'importar' && <Importar onImportado={() => setVista('pendientes')} />}
         {vista === 'pendientes' && <Pendientes />}
+        {vista === 'transacciones' && <Transacciones />}
         {vista === 'admin' && <Admin />}
       </main>
     </div>
@@ -88,7 +96,7 @@ const styles = {
     background: 'none', border: '1px solid #334155', color: '#cbd5e1',
     borderRadius: '6px', padding: '6px 12px', fontSize: '13px', cursor: 'pointer',
   },
-  nav: { display: 'flex', gap: '4px', padding: '12px 24px', borderBottom: '1px solid #1e293b' },
+  nav: { display: 'flex', flexWrap: 'wrap', gap: '4px', padding: '12px 24px', borderBottom: '1px solid #1e293b' },
   navButton: {
     background: 'none', border: 'none', color: '#94a3b8', padding: '8px 14px',
     borderRadius: '6px', fontSize: '13px', cursor: 'pointer',
