@@ -4,6 +4,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Importar from './pages/Importar'
 import Pendientes from './pages/Pendientes'
+import Admin from './pages/Admin'
 
 export default function App() {
   const [session, setSession] = useState(undefined) // undefined = cargando, null = sin sesión
@@ -57,12 +58,19 @@ export default function App() {
         >
           Pendientes
         </button>
+        <button
+          onClick={() => setVista('admin')}
+          style={vista === 'admin' ? styles.navButtonActive : styles.navButton}
+        >
+          Admin
+        </button>
       </nav>
 
       <main>
         {vista === 'dashboard' && <Dashboard />}
         {vista === 'importar' && <Importar onImportado={() => setVista('pendientes')} />}
         {vista === 'pendientes' && <Pendientes />}
+        {vista === 'admin' && <Admin />}
       </main>
     </div>
   )
