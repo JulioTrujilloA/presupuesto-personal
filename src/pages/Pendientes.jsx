@@ -9,10 +9,10 @@ export default function Pendientes() {
   const [error, setError] = useState(null)
   const [seleccionCategoria, setSeleccionCategoria] = useState({})
 
+  // No se llama setState de forma síncrona aquí: el estado inicial ya es
+  // cargando=true, y los setState ocurren tras el await (permitido por la regla
+  // react-hooks/set-state-in-effect).
   const cargarDatos = useCallback(async () => {
-    setCargando(true)
-    setError(null)
-
     const [pendRes, catRes] = await Promise.all([
       supabase
         .from('transacciones_importadas')
@@ -32,6 +32,10 @@ export default function Pendientes() {
   }, [])
 
   useEffect(() => {
+    // Carga inicial al montar (sincronización con Supabase). La regla marca
+    // cualquier setState alcanzable desde el efecto; aquí ocurren tras el await,
+    // así que la excepción es intencional.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     cargarDatos()
   }, [cargarDatos])
 
