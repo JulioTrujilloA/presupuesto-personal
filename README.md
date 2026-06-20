@@ -57,7 +57,11 @@ src/
 La extracción de transacciones usa la API de Claude. **La API key de Anthropic
 nunca vive en el cliente.** La llamada corre en la Edge Function
 `analizar-estado` (`supabase/functions/analizar-estado/`), que el frontend
-consume con `supabase.functions.invoke`. El cliente solo envía el PDF en base64.
+consume con `supabase.functions.invoke`. El cliente envía el PDF en base64 +
+`cuenta_id`; la función extrae las transacciones, **inserta en
+`transacciones_importadas` con estado `pendiente`** (usando el JWT del usuario,
+respeta RLS) y devuelve las filas. El cliente luego aplica
+`reglas_categorizacion` sobre esas filas.
 
 La API key se configura como **secreto** de la función (no en el `.env` del
 frontend):

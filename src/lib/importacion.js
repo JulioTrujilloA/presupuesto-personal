@@ -9,12 +9,14 @@ const fileToBase64 = (file) => {
   })
 }
 
-// Extrae las transacciones del PDF llamando a la Edge Function 'analizar-estado'.
-// La función vive en Supabase y guarda ahí la API key de Anthropic; el cliente
-// solo envía el PDF en base64. functions.invoke añade el JWT del usuario.
-const analyzePDF = async (base64Data) => {
+// Llama a la Edge Function 'analizar-estado': extrae las transacciones del PDF
+// con Claude (API key del lado servidor) e inserta en transacciones_importadas
+// con estado 'pendiente'. Devuelve las filas insertadas. functions.invoke
+// añade el JWT del usuario automáticamente.
+const analizarEImportar = async (file, cuentaId) => {
+  const base64Data = await fileToBase64(file)
   const { data, error } = await supabase.functions.invoke('analizar-estado', {
-    body: { pdf_base64: base64Data },
+    body: { pdf_base64: base64Data, cuenta_id: cuentaId, documento_origen: file.name },
   })
 
   if (error) {
@@ -29,41 +31,19 @@ const analyzePDF = async (base64Data) => {
     throw new Error(mensaje || 'Error al analizar el PDF')
   }
 
-  return data
+  return data.filas ?? []
 }
 
-// Procesa varios PDFs para una cuenta específica y guarda los resultados
-// en transacciones_importadas con estado 'pendiente'.
+// Procesa varios PDFs para una cuenta específica. La inserción en staging la
+// hace la Edge Function; aquí solo se recogen las filas y se aplican reglas.
 export const importarEstadosCuenta = async (files, cuentaId, setProgreso) => {
   setProgreso({ actual: 0, total: files.length })
   const filasInsertadas = []
 
   for (let i = 0; i < files.length; i++) {
-    const file = files[i]
     setProgreso({ actual: i + 1, total: files.length })
-
-    const base64Data = await fileToBase64(file)
-    const parsed = await analyzePDF(base64Data)
-
-    const filas = parsed.transacciones.map((t) => ({
-      cuenta_id: cuentaId,
-      fecha: t.fecha,
-      descripcion_original: t.descripcion,
-      monto: t.monto,
-      tipo: t.tipo,
-      documento_origen: file.name,
-      estado: 'pendiente',
-    }))
-
-    if (filas.length > 0) {
-      const { data, error } = await supabase
-        .from('transacciones_importadas')
-        .insert(filas)
-        .select()
-
-      if (error) throw error
-      filasInsertadas.push(...data)
-    }
+    const filas = await analizarEImportar(files[i], cuentaId)
+    filasInsertadas.push(...filas)
   }
 
   // Aplica reglas de categorización después de insertar
