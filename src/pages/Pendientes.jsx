@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { formatAmount } from '../lib/importacion'
+import { AlertTriangle } from 'lucide-react'
 
 const BUCKET = 'estados-cuenta'
 
@@ -96,7 +97,6 @@ export default function Pendientes() {
       documentos.push({ path: p.documento_path, nombre: p.documento_origen || p.documento_path.split('/').pop() })
     }
   }
-  // Documento activo: el elegido, o el primero disponible.
   const docActivo = documentos.find((d) => d.path === docPath)?.path ?? documentos[0]?.path ?? null
 
   // Genera URL firmada del documento activo de Storage.
@@ -185,50 +185,55 @@ export default function Pendientes() {
     setPendientes((prev) => prev.filter((p) => p.id !== fila.id))
   }
 
+  const tieneSeleccion = Object.keys(seleccionCategoria).length > 0
+  const selectCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary-500 focus:border-transparent'
+
   return (
-    <div style={styles.container}>
-      <h2 style={styles.title}>Transacciones por revisar</h2>
-      <p style={styles.subtitle}>
+    <div className="max-w-6xl mx-auto animate-slide-in">
+      <h2 className="text-2xl font-bold text-gray-900 mb-1">Transacciones por revisar</h2>
+      <p className="text-sm text-gray-500 mb-4">
         {pendientes.length === 0
           ? 'No hay transacciones pendientes de revisión.'
           : `${pendientes.length} por revisar. El PDF importado se muestra al lado para cotejar.`}
       </p>
 
-      {error && <div style={styles.error}>{error}</div>}
-      {aviso && <div style={styles.ok}>{aviso}</div>}
+      {error && <div className="alert-danger text-sm mb-3">{error}</div>}
+      {aviso && <div className="alert-success text-sm mb-3">{aviso}</div>}
 
-      <div style={styles.split}>
+      <div className="flex gap-3 items-stretch flex-wrap">
         {/* Lista de pendientes (scrollable) */}
-        <div style={styles.listPane}>
+        <div className="flex-1 min-w-[320px] h-[70vh] overflow-y-auto flex flex-col gap-3 pr-1">
           {cargando ? (
-            <div style={styles.loading}>Cargando pendientes...</div>
+            <div className="py-10 text-center text-gray-400">Cargando pendientes...</div>
           ) : pendientes.length === 0 ? (
-            <p style={styles.vacio}>Nada pendiente.</p>
+            <p className="text-sm text-gray-400">Nada pendiente.</p>
           ) : (
             pendientes.map((fila) => (
-              <div key={fila.id} style={fila._dup ? { ...styles.card, ...styles.cardDup } : styles.card}>
-                <div style={styles.cardHeader}>
-                  <span style={styles.fecha}>{fila.fecha}</span>
-                  <span style={fila.tipo === 'ingreso' ? styles.tipoIngreso : styles.tipoGasto}>
+              <div key={fila.id} className={`card !p-4 ${fila._dup ? 'border-warning-400 ring-1 ring-warning-200' : ''}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-gray-400">{fila.fecha}</span>
+                  <span className={`text-xs font-semibold ${fila.tipo === 'ingreso' ? 'text-success-600' : 'text-danger-600'}`}>
                     {fila.tipo === 'ingreso' ? 'Ingreso' : 'Gasto'}
                   </span>
                 </div>
 
                 {fila._dup && (
-                  <div style={styles.dupBadge}>⚠ Posible duplicado — revisa antes de confirmar</div>
+                  <div className="alert-warning text-xs flex items-center gap-1.5 mb-2 !p-2">
+                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> Posible duplicado — revisa antes de confirmar
+                  </div>
                 )}
 
-                <p style={styles.descripcion}>{fila.descripcion_original}</p>
+                <p className="text-sm text-gray-900 mb-2">{fila.descripcion_original}</p>
 
-                <div style={styles.metaRow}>
-                  <span style={styles.meta}>{fila.cuentas?.nombre}</span>
-                  <span style={styles.monto}>{formatAmount(fila.monto)}</span>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs text-gray-400">{fila.cuentas?.nombre}</span>
+                  <span className="text-sm font-semibold text-gray-900">{formatAmount(fila.monto)}</span>
                 </div>
 
                 <select
                   value={categoriaSeleccionada(fila)}
                   onChange={(e) => handleCategoriaChange(fila.id, e.target.value)}
-                  style={styles.select}
+                  className={`${selectCls} mb-3`}
                 >
                   <option value="">Selecciona categoría...</option>
                   {categorias
@@ -236,12 +241,12 @@ export default function Pendientes() {
                     .map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                 </select>
 
-                <div style={styles.actions}>
-                  <button onClick={() => handleDescartar(fila)} style={styles.descartarButton}>
+                <div className="flex gap-2">
+                  <button onClick={() => handleDescartar(fila)} className="btn-secondary flex-1 text-sm">
                     Descartar
                   </button>
                   {fila._dup && (
-                    <button onClick={() => confirmarUno(fila)} style={styles.confirmarUnoButton}>
+                    <button onClick={() => confirmarUno(fila)} className="flex-1 text-sm font-medium px-4 py-2 rounded-lg bg-warning-600 hover:bg-warning-700 text-white transition-colors">
                       Confirmar igual
                     </button>
                   )}
@@ -252,20 +257,16 @@ export default function Pendientes() {
         </div>
 
         {/* Visor de PDF */}
-        <div style={styles.pdfPane}>
+        <div className="flex-1 min-w-[320px] h-[70vh] flex flex-col gap-2 bg-white border border-gray-200 rounded-xl p-3 shadow-sm">
           {documentos.length > 1 && (
-            <select
-              value={docActivo ?? ''}
-              onChange={(e) => setDocPath(e.target.value)}
-              style={styles.docSelect}
-            >
+            <select value={docActivo ?? ''} onChange={(e) => setDocPath(e.target.value)} className={selectCls}>
               {documentos.map((d) => <option key={d.path} value={d.path}>{d.nombre}</option>)}
             </select>
           )}
           {storageUrl ? (
-            <iframe src={storageUrl} title="PDF" style={styles.iframe} />
+            <iframe src={storageUrl} title="PDF" className="flex-1 w-full rounded-lg border border-gray-200" />
           ) : (
-            <div style={styles.pdfEmpty}>
+            <div className="flex-1 flex items-center justify-center text-sm text-gray-400 text-center px-5">
               {documentos.length > 0 ? 'Cargando PDF...' : 'El PDF importado aparecerá aquí al revisar.'}
             </div>
           )}
@@ -273,53 +274,17 @@ export default function Pendientes() {
       </div>
 
       {/* Barra de acciones general */}
-      <div style={styles.bottomBar}>
-        <span style={styles.dirtyCount}>
+      <div className="flex items-center gap-3 mt-4 pt-3 border-t border-gray-200">
+        <span className="text-sm text-gray-500 mr-auto">
           {listas.length > 0 ? `${listas.length} con categoría, listas` : 'Asigna categorías para confirmar'}
         </span>
-        <button onClick={cancelar} disabled={Object.keys(seleccionCategoria).length === 0} style={Object.keys(seleccionCategoria).length ? styles.cancelBtn : styles.btnDisabled}>
+        <button onClick={cancelar} disabled={!tieneSeleccion} className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed">
           Cancelar
         </button>
-        <button onClick={confirmarMasivo} disabled={listas.length === 0} style={listas.length ? styles.saveBtn : styles.btnDisabled}>
+        <button onClick={confirmarMasivo} disabled={listas.length === 0} className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
           Confirmar{listas.length ? ` (${listas.length})` : ''}
         </button>
       </div>
     </div>
   )
-}
-
-const styles = {
-  container: { maxWidth: '1100px', margin: '0 auto', padding: '24px' },
-  title: { fontSize: '20px', margin: '0 0 4px 0', color: '#f8fafc' },
-  subtitle: { fontSize: '13px', color: '#94a3b8', margin: '0 0 14px 0' },
-  split: { display: 'flex', gap: '12px', alignItems: 'stretch', flexWrap: 'wrap' },
-  listPane: { flex: '1 1 360px', minWidth: '320px', height: '70vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', paddingRight: '4px' },
-  pdfPane: { flex: '1 1 360px', minWidth: '320px', height: '70vh', display: 'flex', flexDirection: 'column', gap: '8px', background: '#1e293b', borderRadius: '10px', padding: '10px' },
-  docSelect: { padding: '7px 8px', borderRadius: '6px', border: '1px solid #334155', background: '#0f172a', color: '#f8fafc', fontSize: '13px' },
-  iframe: { flex: 1, width: '100%', border: 'none', borderRadius: '8px', background: '#fff' },
-  pdfEmpty: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '13px', textAlign: 'center', padding: '20px' },
-  loading: { padding: '40px', textAlign: 'center', color: '#94a3b8' },
-  vacio: { fontSize: '13px', color: '#64748b' },
-  card: { background: '#1e293b', borderRadius: '10px', padding: '14px' },
-  cardDup: { border: '1px solid #b45309' },
-  dupBadge: { fontSize: '12px', color: '#fdba74', background: '#7c2d12', borderRadius: '6px', padding: '4px 8px', margin: '0 0 8px 0', display: 'inline-block' },
-  cardHeader: { display: 'flex', justifyContent: 'space-between', marginBottom: '8px' },
-  fecha: { fontSize: '12px', color: '#94a3b8' },
-  tipoIngreso: { fontSize: '11px', color: '#4ade80', fontWeight: 600 },
-  tipoGasto: { fontSize: '11px', color: '#f87171', fontWeight: 600 },
-  descripcion: { fontSize: '14px', color: '#f8fafc', margin: '0 0 8px 0' },
-  metaRow: { display: 'flex', justifyContent: 'space-between', marginBottom: '10px' },
-  meta: { fontSize: '12px', color: '#64748b' },
-  monto: { fontSize: '15px', color: '#f8fafc', fontWeight: 600 },
-  select: { width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #334155', background: '#0f172a', color: '#f8fafc', fontSize: '13px', marginBottom: '10px' },
-  actions: { display: 'flex', gap: '8px' },
-  descartarButton: { flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #475569', background: 'transparent', color: '#cbd5e1', fontSize: '13px', cursor: 'pointer' },
-  confirmarUnoButton: { flex: 1, padding: '8px', borderRadius: '6px', border: 'none', background: '#b45309', color: '#0f172a', fontWeight: 600, fontSize: '13px', cursor: 'pointer' },
-  bottomBar: { display: 'flex', alignItems: 'center', gap: '10px', marginTop: '14px', paddingTop: '12px', borderTop: '1px solid #1e293b' },
-  dirtyCount: { fontSize: '12px', color: '#94a3b8', marginRight: 'auto' },
-  cancelBtn: { padding: '9px 16px', borderRadius: '6px', border: '1px solid #475569', background: 'transparent', color: '#cbd5e1', fontSize: '13px', cursor: 'pointer' },
-  saveBtn: { padding: '9px 16px', borderRadius: '6px', border: 'none', background: '#22c55e', color: '#0f172a', fontWeight: 600, fontSize: '13px', cursor: 'pointer' },
-  btnDisabled: { padding: '9px 16px', borderRadius: '6px', border: '1px solid #1e293b', background: 'transparent', color: '#475569', fontSize: '13px', cursor: 'not-allowed' },
-  error: { marginBottom: '12px', background: '#7f1d1d', color: '#fecaca', padding: '8px 10px', borderRadius: '6px', fontSize: '13px' },
-  ok: { marginBottom: '12px', background: '#14532d', color: '#bbf7d0', padding: '8px 10px', borderRadius: '6px', fontSize: '13px' },
 }

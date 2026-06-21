@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { importarEstadosCuenta } from '../lib/importacion'
+import { UploadCloud, X } from 'lucide-react'
 
 export default function Importar({ onImportado }) {
   const [cuentas, setCuentas] = useState([])
@@ -19,11 +20,8 @@ export default function Importar({ onImportado }) {
         .eq('activa', true)
         .order('nombre')
 
-      if (error) {
-        setError('No se pudieron cargar las cuentas: ' + error.message)
-      } else {
-        setCuentas(data)
-      }
+      if (error) setError('No se pudieron cargar las cuentas: ' + error.message)
+      else setCuentas(data)
     }
     cargarCuentas()
   }, [])
@@ -31,24 +29,16 @@ export default function Importar({ onImportado }) {
   const handleFileChange = (e) => {
     const selected = Array.from(e.target.files || [])
     const pdfs = selected.filter((f) => f.type === 'application/pdf')
-    if (pdfs.length !== selected.length) {
-      setError('Algunos archivos no son PDF y fueron ignorados')
-    } else {
-      setError(null)
-    }
+    if (pdfs.length !== selected.length) setError('Algunos archivos no son PDF y fueron ignorados')
+    else setError(null)
     setFiles((prev) => [...prev, ...pdfs])
     e.target.value = ''
   }
 
-  const removeFile = (idx) => {
-    setFiles((prev) => prev.filter((_, i) => i !== idx))
-  }
+  const removeFile = (idx) => setFiles((prev) => prev.filter((_, i) => i !== idx))
 
   const handleImportar = async () => {
-    if (!cuentaId) {
-      setError('Selecciona una cuenta antes de importar')
-      return
-    }
+    if (!cuentaId) { setError('Selecciona una cuenta antes de importar'); return }
     if (files.length === 0) return
 
     setCargando(true)
@@ -68,93 +58,52 @@ export default function Importar({ onImportado }) {
     }
   }
 
+  const selectCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary-500 focus:border-transparent'
+
   return (
-    <div style={styles.container}>
-      <h2 style={styles.title}>Importar estado de cuenta</h2>
-      <p style={styles.subtitle}>Selecciona la cuenta y sube uno o varios PDFs de ese banco.</p>
+    <div className="max-w-lg mx-auto animate-slide-in">
+      <h2 className="text-2xl font-bold text-gray-900 mb-1">Importar estado de cuenta</h2>
+      <p className="text-sm text-gray-500 mb-5">Selecciona la cuenta y sube uno o varios PDFs de ese banco.</p>
 
-      <label style={styles.label}>Cuenta</label>
-      <select
-        value={cuentaId}
-        onChange={(e) => setCuentaId(e.target.value)}
-        style={styles.select}
-      >
-        <option value="">Selecciona una cuenta...</option>
-        {cuentas.map((c) => (
-          <option key={c.id} value={c.id}>{c.nombre}</option>
-        ))}
-      </select>
-
-      <input
-        type="file"
-        accept=".pdf"
-        multiple
-        onChange={handleFileChange}
-        id="file-upload"
-        style={{ display: 'none' }}
-      />
-      <label htmlFor="file-upload" style={styles.uploadButton}>
-        {files.length === 0 ? 'Seleccionar PDFs' : 'Agregar más PDFs'}
-      </label>
-
-      {files.length > 0 && (
-        <div style={styles.fileList}>
-          {files.map((f, idx) => (
-            <div key={idx} style={styles.fileItem}>
-              <span>{f.name}</span>
-              <button onClick={() => removeFile(idx)} style={styles.removeButton}>✕</button>
-            </div>
-          ))}
+      <div className="card space-y-4">
+        <div>
+          <label className="label-field">Cuenta</label>
+          <select value={cuentaId} onChange={(e) => setCuentaId(e.target.value)} className={selectCls}>
+            <option value="">Selecciona una cuenta...</option>
+            {cuentas.map((c) => <option key={c.id} value={c.id}>{c.nombre} — {c.banco}</option>)}
+          </select>
         </div>
-      )}
 
-      {error && <div style={styles.error}>{error}</div>}
-      {exito && <div style={styles.exito}>{exito}</div>}
+        <input type="file" accept=".pdf" multiple onChange={handleFileChange} id="file-upload" className="hidden" />
+        <label htmlFor="file-upload" className="flex flex-col items-center justify-center gap-2 py-8 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-primary-400 hover:text-primary-600 cursor-pointer transition-colors">
+          <UploadCloud className="h-7 w-7" />
+          <span className="text-sm">{files.length === 0 ? 'Seleccionar PDFs' : 'Agregar más PDFs'}</span>
+        </label>
 
-      {files.length > 0 && (
-        <button
-          onClick={handleImportar}
-          disabled={cargando || !cuentaId}
-          style={styles.analyzeButton}
-        >
-          {cargando
-            ? `Procesando ${progreso.actual}/${progreso.total}...`
-            : `Importar ${files.length} documento${files.length > 1 ? 's' : ''}`}
-        </button>
-      )}
+        {files.length > 0 && (
+          <div className="space-y-2">
+            {files.map((f, idx) => (
+              <div key={idx} className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700">
+                <span className="truncate">{f.name}</span>
+                <button onClick={() => removeFile(idx)} className="text-danger-500 hover:text-danger-700 ml-2">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {error && <div className="alert-danger text-sm">{error}</div>}
+        {exito && <div className="alert-success text-sm">{exito}</div>}
+
+        {files.length > 0 && (
+          <button onClick={handleImportar} disabled={cargando || !cuentaId} className="btn-primary w-full disabled:opacity-60">
+            {cargando
+              ? `Procesando ${progreso.actual}/${progreso.total}...`
+              : `Importar ${files.length} documento${files.length > 1 ? 's' : ''}`}
+          </button>
+        )}
+      </div>
     </div>
   )
-}
-
-const styles = {
-  container: { maxWidth: '480px', margin: '0 auto', padding: '24px' },
-  title: { fontSize: '20px', margin: '0 0 4px 0', color: '#f8fafc' },
-  subtitle: { fontSize: '13px', color: '#94a3b8', margin: '0 0 20px 0' },
-  label: { fontSize: '13px', color: '#cbd5e1', display: 'block', marginBottom: '6px' },
-  select: {
-    width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #334155',
-    background: '#0f172a', color: '#f8fafc', fontSize: '14px', marginBottom: '16px',
-  },
-  uploadButton: {
-    display: 'block', textAlign: 'center', padding: '12px', borderRadius: '8px',
-    border: '1px dashed #475569', color: '#60a5fa', cursor: 'pointer', fontSize: '14px',
-  },
-  fileList: { marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '6px' },
-  fileItem: {
-    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    background: '#1e293b', padding: '8px 12px', borderRadius: '6px', fontSize: '13px', color: '#e2e8f0',
-  },
-  removeButton: { background: 'none', border: 'none', color: '#f87171', cursor: 'pointer' },
-  analyzeButton: {
-    width: '100%', marginTop: '16px', padding: '12px', borderRadius: '8px', border: 'none',
-    background: '#22c55e', color: '#0f172a', fontWeight: 600, fontSize: '14px', cursor: 'pointer',
-  },
-  error: {
-    marginTop: '12px', background: '#7f1d1d', color: '#fecaca', padding: '8px 10px',
-    borderRadius: '6px', fontSize: '13px',
-  },
-  exito: {
-    marginTop: '12px', background: '#14532d', color: '#bbf7d0', padding: '8px 10px',
-    borderRadius: '6px', fontSize: '13px',
-  },
 }

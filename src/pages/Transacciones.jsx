@@ -116,85 +116,86 @@ export default function Transacciones() {
   const ingresos = rows.filter((r) => r.tipo === 'ingreso').reduce((s, r) => s + Number(r.monto), 0)
   const gastos = rows.filter((r) => r.tipo === 'gasto').reduce((s, r) => s + Number(r.monto), 0)
 
-  return (
-    <div style={styles.container}>
-      <h2 style={styles.title}>Transacciones</h2>
+  const selectCls = 'px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary-500 focus:border-transparent'
+  const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary-500 focus:border-transparent'
 
-      <div style={styles.filtros}>
-        <select value={cuentaFiltro} onChange={(e) => setCuentaFiltro(e.target.value)} style={styles.select}>
+  return (
+    <div className="max-w-3xl mx-auto animate-slide-in">
+      <h2 className="text-2xl font-bold text-gray-900 mb-3">Transacciones</h2>
+
+      <div className="flex gap-2 flex-wrap mb-3">
+        <select value={cuentaFiltro} onChange={(e) => setCuentaFiltro(e.target.value)} className={`${selectCls} flex-1 min-w-[160px]`}>
           <option value="todas">Todas las cuentas</option>
-          {cuentas.map((c) => (
-            <option key={c.id} value={c.id}>{c.nombre} — {c.banco}</option>
-          ))}
+          {cuentas.map((c) => <option key={c.id} value={c.id}>{c.nombre} — {c.banco}</option>)}
         </select>
-        <select value={mes} onChange={(e) => setMes(Number(e.target.value))} style={styles.select}>
+        <select value={mes} onChange={(e) => setMes(Number(e.target.value))} className={selectCls}>
           <option value={0}>Todo el año</option>
           {nombresMes.map((nm, i) => <option key={i} value={i + 1}>{nm}</option>)}
         </select>
-        <select value={anio} onChange={(e) => setAnio(Number(e.target.value))} style={styles.select}>
+        <select value={anio} onChange={(e) => setAnio(Number(e.target.value))} className={selectCls}>
           {anios.map((a) => <option key={a} value={a}>{a}</option>)}
         </select>
       </div>
 
-      <div style={styles.resumen}>
-        <span>{rows.length} mov.</span>
-        <span style={styles.ingreso}>+{formatAmount(ingresos)}</span>
-        <span style={styles.gasto}>-{formatAmount(gastos)}</span>
-        <span style={styles.neto}>neto {formatAmount(ingresos - gastos)}</span>
+      <div className="flex gap-4 flex-wrap text-sm bg-white border border-gray-200 rounded-lg px-4 py-3 mb-4 shadow-sm">
+        <span className="text-gray-500">{rows.length} mov.</span>
+        <span className="text-success-600 font-semibold">+{formatAmount(ingresos)}</span>
+        <span className="text-danger-600 font-semibold">-{formatAmount(gastos)}</span>
+        <span className="text-gray-900 font-semibold ml-auto">neto {formatAmount(ingresos - gastos)}</span>
       </div>
 
-      {error && <div style={styles.error}>{error}</div>}
+      {error && <div className="alert-danger text-sm mb-3">{error}</div>}
 
       {cargando ? (
-        <div style={styles.loading}>Cargando...</div>
+        <div className="py-10 text-center text-gray-400">Cargando...</div>
       ) : rows.length === 0 ? (
-        <p style={styles.vacio}>No hay transacciones con estos filtros.</p>
+        <p className="text-sm text-gray-400">No hay transacciones con estos filtros.</p>
       ) : (
-        <div style={styles.list}>
+        <div className="space-y-2">
           {rows.map((row) => (
-            <div key={row.id} style={styles.card}>
+            <div key={row.id} className="card !p-4">
               {editId === row.id ? (
-                <div style={styles.editForm}>
-                  <div style={styles.editRow}>
-                    <input type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} style={styles.input} />
-                    <input type="number" value={form.monto} onChange={(e) => setForm({ ...form, monto: e.target.value })} style={{ ...styles.input, maxWidth: '110px', textAlign: 'right' }} />
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <input type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} className={inputCls} />
+                    <input type="number" value={form.monto} onChange={(e) => setForm({ ...form, monto: e.target.value })} className={`${inputCls} max-w-[120px] text-right`} />
                   </div>
-                  <input value={form.detalle} onChange={(e) => setForm({ ...form, detalle: e.target.value })} placeholder="Detalle" style={styles.input} />
-                  <div style={styles.editRow}>
-                    <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value, categoria_id: '' })} style={styles.input}>
+                  <input value={form.detalle} onChange={(e) => setForm({ ...form, detalle: e.target.value })} placeholder="Detalle" className={inputCls} />
+                  <div className="flex gap-2">
+                    <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value, categoria_id: '' })} className={inputCls}>
                       <option value="gasto">gasto</option>
                       <option value="ingreso">ingreso</option>
                     </select>
-                    <select value={form.cuenta_id} onChange={(e) => setForm({ ...form, cuenta_id: e.target.value })} style={styles.input}>
+                    <select value={form.cuenta_id} onChange={(e) => setForm({ ...form, cuenta_id: e.target.value })} className={inputCls}>
                       {cuentas.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                     </select>
                   </div>
-                  <select value={form.categoria_id} onChange={(e) => setForm({ ...form, categoria_id: e.target.value })} style={styles.input}>
+                  <select value={form.categoria_id} onChange={(e) => setForm({ ...form, categoria_id: e.target.value })} className={inputCls}>
                     <option value="">Categoría...</option>
                     {categorias.filter((c) => c.tipo === form.tipo).map((c) => (
                       <option key={c.id} value={c.id}>{c.nombre}</option>
                     ))}
                   </select>
-                  <div style={styles.actions}>
-                    <button onClick={() => setEditId(null)} style={styles.cancelBtn}>Cancelar</button>
-                    <button onClick={guardar} style={styles.saveBtn}>Guardar</button>
+                  <div className="flex gap-2 justify-end">
+                    <button onClick={() => setEditId(null)} className="btn-secondary text-sm">Cancelar</button>
+                    <button onClick={guardar} className="btn-primary text-sm">Guardar</button>
                   </div>
                 </div>
               ) : (
                 <>
-                  <div style={styles.cardHeader}>
-                    <span style={styles.fecha}>{row.fecha}</span>
-                    <span style={row.tipo === 'ingreso' ? styles.ingreso : styles.gasto}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-gray-400">{row.fecha}</span>
+                    <span className={`text-sm font-semibold ${row.tipo === 'ingreso' ? 'text-success-600' : 'text-danger-600'}`}>
                       {row.tipo === 'ingreso' ? '+' : '-'}{formatAmount(row.monto)}
                     </span>
                   </div>
-                  <p style={styles.detalle}>{row.detalle}</p>
-                  <div style={styles.metaRow}>
-                    <span style={styles.meta}>{row.cuentas?.nombre} · {row.categorias?.nombre ?? 'sin categoría'}</span>
-                  </div>
-                  <div style={styles.actions}>
-                    <button onClick={() => borrar(row)} style={styles.delBtn}>Borrar</button>
-                    <button onClick={() => empezarEdicion(row)} style={styles.editBtn}>Editar</button>
+                  <p className="text-sm text-gray-900 mb-1">{row.detalle}</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-400">{row.cuentas?.nombre} · {row.categorias?.nombre ?? 'sin categoría'}</span>
+                    <div className="flex gap-2">
+                      <button onClick={() => borrar(row)} className="text-xs font-medium px-3 py-1.5 rounded-lg border border-danger-200 text-danger-600 hover:bg-danger-50 transition-colors">Borrar</button>
+                      <button onClick={() => empezarEdicion(row)} className="btn-secondary text-xs py-1.5 px-3">Editar</button>
+                    </div>
                   </div>
                 </>
               )}
@@ -204,33 +205,4 @@ export default function Transacciones() {
       )}
     </div>
   )
-}
-
-const styles = {
-  container: { maxWidth: '520px', margin: '0 auto', padding: '24px' },
-  title: { fontSize: '20px', color: '#f8fafc', margin: '0 0 12px 0' },
-  filtros: { display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' },
-  select: { flex: 1, minWidth: '120px', padding: '8px', borderRadius: '6px', border: '1px solid #334155', background: '#0f172a', color: '#f8fafc', fontSize: '13px' },
-  resumen: { display: 'flex', gap: '10px', flexWrap: 'wrap', fontSize: '12px', color: '#94a3b8', marginBottom: '12px', padding: '8px 10px', background: '#1e293b', borderRadius: '8px' },
-  ingreso: { color: '#4ade80', fontWeight: 600 },
-  gasto: { color: '#f87171', fontWeight: 600 },
-  neto: { color: '#e2e8f0', fontWeight: 600, marginLeft: 'auto' },
-  list: { display: 'flex', flexDirection: 'column', gap: '8px' },
-  card: { background: '#1e293b', borderRadius: '10px', padding: '12px 14px' },
-  cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' },
-  fecha: { fontSize: '12px', color: '#94a3b8' },
-  detalle: { fontSize: '13px', color: '#f8fafc', margin: '0 0 4px 0' },
-  metaRow: { marginBottom: '8px' },
-  meta: { fontSize: '12px', color: '#64748b' },
-  actions: { display: 'flex', gap: '8px', justifyContent: 'flex-end' },
-  editBtn: { padding: '6px 12px', borderRadius: '6px', border: '1px solid #475569', background: 'transparent', color: '#cbd5e1', fontSize: '12px', cursor: 'pointer' },
-  delBtn: { padding: '6px 12px', borderRadius: '6px', border: '1px solid #7f1d1d', background: 'transparent', color: '#f87171', fontSize: '12px', cursor: 'pointer' },
-  editForm: { display: 'flex', flexDirection: 'column', gap: '8px' },
-  editRow: { display: 'flex', gap: '8px' },
-  input: { flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #334155', background: '#0f172a', color: '#f8fafc', fontSize: '13px' },
-  cancelBtn: { padding: '6px 12px', borderRadius: '6px', border: '1px solid #475569', background: 'transparent', color: '#cbd5e1', fontSize: '12px', cursor: 'pointer' },
-  saveBtn: { padding: '6px 12px', borderRadius: '6px', border: 'none', background: '#22c55e', color: '#0f172a', fontWeight: 600, fontSize: '12px', cursor: 'pointer' },
-  loading: { padding: '30px', textAlign: 'center', color: '#94a3b8' },
-  vacio: { fontSize: '13px', color: '#64748b' },
-  error: { background: '#7f1d1d', color: '#fecaca', padding: '8px 10px', borderRadius: '6px', fontSize: '13px', marginBottom: '10px' },
 }

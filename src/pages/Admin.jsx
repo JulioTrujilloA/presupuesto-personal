@@ -6,17 +6,21 @@ const TIPOS_CUENTA = ['debito', 'credito']
 const nombresMes = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 const ANIO_INICIO = 2026
 
+const fieldCls = 'px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary-500 focus:border-transparent'
+const rowInputCls = 'flex-1 min-w-0 px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary-500 focus:border-transparent'
+
 export default function Admin() {
   const [sub, setSub] = useState('categorias')
+  const tabs = [['categorias', 'Categorías'], ['cuentas', 'Cuentas'], ['presupuesto', 'Presupuesto']]
   return (
-    <div style={styles.container}>
-      <h2 style={styles.title}>Administración</h2>
-      <div style={styles.subnav}>
-        {[['categorias', 'Categorías'], ['cuentas', 'Cuentas'], ['presupuesto', 'Presupuesto']].map(([k, label]) => (
+    <div className="max-w-2xl mx-auto animate-slide-in">
+      <h2 className="text-2xl font-bold text-gray-900 mb-4">Administración</h2>
+      <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5 mb-5">
+        {tabs.map(([k, label]) => (
           <button
             key={k}
             onClick={() => setSub(k)}
-            style={sub === k ? styles.subOn : styles.subOff}
+            className={`px-3 py-1.5 rounded-md text-sm transition-colors ${sub === k ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
           >
             {label}
           </button>
@@ -71,25 +75,25 @@ function Categorias() {
   }
 
   return (
-    <div>
-      <div style={styles.addRow}>
-        <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nueva categoría" style={styles.input} />
-        <select value={tipo} onChange={(e) => setTipo(e.target.value)} style={styles.select}>
+    <div className="card">
+      <div className="flex gap-2 flex-wrap mb-3">
+        <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nueva categoría" className={`${fieldCls} flex-1 min-w-[140px]`} />
+        <select value={tipo} onChange={(e) => setTipo(e.target.value)} className={fieldCls}>
           {TIPOS_CATEGORIA.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
-        <button onClick={agregar} style={styles.addButton}>Agregar</button>
+        <button onClick={agregar} className="btn-primary">Agregar</button>
       </div>
-      {error && <div style={styles.error}>{error}</div>}
-      <div style={styles.list}>
+      {error && <div className="alert-danger text-sm mb-3">{error}</div>}
+      <div className="space-y-2">
         {items.map((item) => (
-          <div key={item.id} style={styles.row}>
+          <div key={item.id} className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
             <input
               defaultValue={item.nombre}
               onBlur={(e) => e.target.value.trim() !== item.nombre && renombrar(item.id, e.target.value)}
-              style={{ ...styles.rowInput, opacity: item.activa ? 1 : 0.5 }}
+              className={`${rowInputCls} ${item.activa ? '' : 'opacity-50'}`}
             />
-            <span style={styles.badge}>{item.tipo}</span>
-            <button onClick={() => toggle(item)} style={item.activa ? styles.offBtn : styles.onBtn}>
+            <span className="badge bg-gray-100 text-gray-600 capitalize">{item.tipo}</span>
+            <button onClick={() => toggle(item)} className={item.activa ? 'btn-secondary text-xs py-1.5 px-3' : 'btn-primary text-xs py-1.5 px-3'}>
               {item.activa ? 'Desactivar' : 'Activar'}
             </button>
           </div>
@@ -140,31 +144,31 @@ function Cuentas() {
   }
 
   return (
-    <div>
-      <div style={styles.addRow}>
-        <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre" style={styles.input} />
-        <input value={banco} onChange={(e) => setBanco(e.target.value)} placeholder="Banco" style={styles.input} />
-        <select value={tipo} onChange={(e) => setTipo(e.target.value)} style={styles.select}>
+    <div className="card">
+      <div className="flex gap-2 flex-wrap mb-3">
+        <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre" className={`${fieldCls} flex-1 min-w-[120px]`} />
+        <input value={banco} onChange={(e) => setBanco(e.target.value)} placeholder="Banco" className={`${fieldCls} flex-1 min-w-[120px]`} />
+        <select value={tipo} onChange={(e) => setTipo(e.target.value)} className={fieldCls}>
           {TIPOS_CUENTA.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
-        <button onClick={agregar} style={styles.addButton}>Agregar</button>
+        <button onClick={agregar} className="btn-primary">Agregar</button>
       </div>
-      {error && <div style={styles.error}>{error}</div>}
-      <div style={styles.list}>
+      {error && <div className="alert-danger text-sm mb-3">{error}</div>}
+      <div className="space-y-2">
         {items.map((item) => (
-          <div key={item.id} style={styles.row}>
+          <div key={item.id} className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
             <input
               defaultValue={item.nombre}
               onBlur={(e) => e.target.value.trim() !== item.nombre && renombrar(item.id, 'nombre', e.target.value)}
-              style={{ ...styles.rowInput, opacity: item.activa ? 1 : 0.5 }}
+              className={`${rowInputCls} ${item.activa ? '' : 'opacity-50'}`}
             />
             <input
               defaultValue={item.banco}
               onBlur={(e) => e.target.value.trim() !== item.banco && renombrar(item.id, 'banco', e.target.value)}
-              style={{ ...styles.rowInput, maxWidth: '110px', opacity: item.activa ? 1 : 0.5 }}
+              className={`${rowInputCls} max-w-[120px] ${item.activa ? '' : 'opacity-50'}`}
             />
-            <span style={styles.badge}>{item.tipo}</span>
-            <button onClick={() => toggle(item)} style={item.activa ? styles.offBtn : styles.onBtn}>
+            <span className="badge bg-gray-100 text-gray-600 capitalize">{item.tipo}</span>
+            <button onClick={() => toggle(item)} className={item.activa ? 'btn-secondary text-xs py-1.5 px-3' : 'btn-primary text-xs py-1.5 px-3'}>
               {item.activa ? 'Desactivar' : 'Activar'}
             </button>
           </div>
@@ -210,7 +214,6 @@ function Presupuesto() {
 
   const guardar = async () => {
     setError(null)
-    // Reemplaza el presupuesto del periodo: borra e inserta los > 0.
     const { error: delErr } = await supabase
       .from('presupuesto_mensual')
       .delete()
@@ -230,56 +233,35 @@ function Presupuesto() {
   }
 
   return (
-    <div>
-      <div style={styles.addRow}>
-        <select value={mes} onChange={(e) => setMes(Number(e.target.value))} style={styles.select}>
+    <div className="card">
+      <div className="flex gap-2 flex-wrap mb-3">
+        <select value={mes} onChange={(e) => setMes(Number(e.target.value))} className={fieldCls}>
           {nombresMes.map((nm, i) => <option key={i} value={i + 1}>{nm}</option>)}
         </select>
-        <select value={anio} onChange={(e) => setAnio(Number(e.target.value))} style={styles.select}>
+        <select value={anio} onChange={(e) => setAnio(Number(e.target.value))} className={fieldCls}>
           {anios.map((a) => <option key={a} value={a}>{a}</option>)}
         </select>
-        <button onClick={guardar} style={styles.addButton}>Guardar</button>
+        <button onClick={guardar} className="btn-primary">Guardar</button>
       </div>
-      {error && <div style={styles.error}>{error}</div>}
-      {guardado && <div style={styles.ok}>Presupuesto guardado.</div>}
-      <div style={styles.list}>
+      {error && <div className="alert-danger text-sm mb-3">{error}</div>}
+      {guardado && <div className="alert-success text-sm mb-3">Presupuesto guardado.</div>}
+      <div className="space-y-2">
         {categorias.map((c) => (
-          <div key={c.id} style={styles.row}>
-            <span style={{ flex: 1, color: '#e2e8f0', fontSize: '13px' }}>{c.nombre}</span>
-            <span style={styles.badge}>{c.tipo}</span>
+          <div key={c.id} className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+            <span className="flex-1 text-sm text-gray-700">{c.nombre}</span>
+            <span className="badge bg-gray-100 text-gray-600 capitalize">{c.tipo}</span>
             <input
               type="number"
               inputMode="decimal"
               value={montos[c.id] ?? ''}
               onChange={(e) => setMontos((prev) => ({ ...prev, [c.id]: e.target.value }))}
               placeholder="0"
-              style={{ ...styles.rowInput, maxWidth: '110px', textAlign: 'right' }}
+              className={`${rowInputCls} max-w-[120px] text-right`}
             />
           </div>
         ))}
       </div>
-      <p style={styles.nota}>Importes en MXN. Las categorías en 0 (o vacías) no se guardan.</p>
+      <p className="text-xs text-gray-400 mt-3">Importes en MXN. Las categorías en 0 (o vacías) no se guardan.</p>
     </div>
   )
-}
-
-const styles = {
-  container: { maxWidth: '560px', margin: '0 auto', padding: '24px' },
-  title: { fontSize: '20px', color: '#f8fafc', margin: '0 0 12px 0' },
-  subnav: { display: 'flex', gap: '4px', marginBottom: '16px' },
-  subOn: { background: '#2563eb', color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '13px', cursor: 'pointer' },
-  subOff: { background: '#1e293b', color: '#94a3b8', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '13px', cursor: 'pointer' },
-  addRow: { display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' },
-  input: { flex: 1, minWidth: '120px', padding: '8px', borderRadius: '6px', border: '1px solid #334155', background: '#0f172a', color: '#f8fafc', fontSize: '13px' },
-  select: { padding: '8px', borderRadius: '6px', border: '1px solid #334155', background: '#0f172a', color: '#f8fafc', fontSize: '13px' },
-  addButton: { padding: '8px 14px', borderRadius: '6px', border: 'none', background: '#22c55e', color: '#0f172a', fontWeight: 600, fontSize: '13px', cursor: 'pointer' },
-  list: { display: 'flex', flexDirection: 'column', gap: '6px' },
-  row: { display: 'flex', alignItems: 'center', gap: '8px', background: '#1e293b', borderRadius: '8px', padding: '8px 10px' },
-  rowInput: { flex: 1, padding: '6px 8px', borderRadius: '6px', border: '1px solid #334155', background: '#0f172a', color: '#f8fafc', fontSize: '13px' },
-  badge: { fontSize: '11px', color: '#94a3b8', background: '#0f172a', borderRadius: '4px', padding: '2px 6px', textTransform: 'capitalize' },
-  offBtn: { padding: '6px 10px', borderRadius: '6px', border: '1px solid #475569', background: 'transparent', color: '#cbd5e1', fontSize: '12px', cursor: 'pointer' },
-  onBtn: { padding: '6px 10px', borderRadius: '6px', border: 'none', background: '#22c55e', color: '#0f172a', fontWeight: 600, fontSize: '12px', cursor: 'pointer' },
-  error: { background: '#7f1d1d', color: '#fecaca', padding: '8px 10px', borderRadius: '6px', fontSize: '13px', marginBottom: '10px' },
-  ok: { background: '#14532d', color: '#bbf7d0', padding: '8px 10px', borderRadius: '6px', fontSize: '13px', marginBottom: '10px' },
-  nota: { fontSize: '12px', color: '#64748b', marginTop: '12px' },
 }
