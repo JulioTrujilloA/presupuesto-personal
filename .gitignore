@@ -32,3 +32,6 @@ pnpm-debug.log*
 # Supabase local
 .supabase/
 supabase/.temp/
+
+# Claude Code (config local de permisos; no versionar)
+.claude/settings.local.json
